@@ -8,6 +8,8 @@ test('storefront, mobile layout, account and simulated checkout',async({page,req
   await page.setViewportSize({width:390,height:844});
   await expect(page.getByRole('navigation',{name:'Main menu'})).toBeVisible();
   await page.screenshot({path:testInfo.outputPath('commerceguard-mobile.png'),fullPage:true});
+  const horizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  expect(horizontalOverflow).toBeLessThanOrEqual(1);
   await page.setViewportSize({width:1400,height:900});
   await page.getByRole('link',{name:'Sign in'}).click();
   await page.getByRole('button',{name:'New here? Create an account'}).click();

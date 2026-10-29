@@ -14,6 +14,7 @@ test('admin inventory creation, product detail and local password recovery',asyn
  await page.getByRole('button',{name:'Add product'}).click();
  await expect(page.getByText('Product created')).toBeVisible();
  await expect(page.getByText(product).first()).toBeVisible();
+ await page.evaluate(()=>window.scrollTo(0,0));
  await page.screenshot({path:testInfo.outputPath('commerceguard-admin.png'),fullPage:true});
  await page.getByRole('link',{name:'Shop',exact:true}).click();
  await page.getByRole('link',{name:product}).click();

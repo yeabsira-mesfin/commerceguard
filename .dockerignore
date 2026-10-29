@@ -1,0 +1,8 @@
+**/node_modules
+**/build
+.git
+.env
+.env.*
+ecommerce/test-results
+ecommerce/playwright-report
+*.log

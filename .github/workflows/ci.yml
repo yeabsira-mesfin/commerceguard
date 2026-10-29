@@ -43,3 +43,21 @@ jobs:
       - name: Check backend dependencies
         working-directory: backend
         run: npm audit --omit=dev --audit-level=high
+      - name: Install Chromium for browser QA
+        working-directory: ecommerce
+        run: npx playwright install --with-deps chromium
+      - name: Run storefront and checkout browser QA
+        working-directory: ecommerce
+        run: npm run test:e2e
+        env:
+          NODE_ENV: development
+          CI: 'false'
+      - name: Upload browser screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commerceguard-browser-qa
+          path: |
+            ecommerce/test-results/
+            ecommerce/playwright-report/
+          if-no-files-found: ignore

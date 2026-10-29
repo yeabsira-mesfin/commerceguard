@@ -31,3 +31,8 @@
 .cg-header nav a,.header-actions a,.header-actions button{color:#40594b}
 .product-info>p{font-weight:800}
 .cg-footer p,.cg-footer small{color:#d3e9d9}
+
+
+/* WCAG account recovery and sign-in contrast */
+.eyebrow,.auth-layout .eyebrow{color:#14563c}
+.auth-layout>div p{color:#435b4b}

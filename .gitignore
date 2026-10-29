@@ -1,0 +1,8 @@
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/node_modules/
+ecommerce/node_modules/
+ecommerce/build/
+coverage/
+*.log

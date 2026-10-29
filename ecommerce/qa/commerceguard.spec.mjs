@@ -1,0 +1,47 @@
+import {test,expect} from '@playwright/test';
+
+test('storefront, mobile layout, account and simulated checkout',async({page,request},testInfo)=>{
+  await page.goto('/');
+  await expect(page.getByRole('heading',{name:/Considered essentials/})).toBeVisible();
+  await expect(page.getByText('Minimal Workspace Lamp')).toBeVisible();
+  await page.screenshot({path:testInfo.outputPath('commerceguard-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await expect(page.getByRole('navigation',{name:'Main menu'})).toBeVisible();
+  await page.screenshot({path:testInfo.outputPath('commerceguard-mobile.png'),fullPage:true});
+  const horizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+  expect(horizontalOverflow).toBeLessThanOrEqual(1);
+  await page.setViewportSize({width:1400,height:900});
+  await page.getByRole('link',{name:'Sign in'}).click();
+  await page.getByRole('button',{name:'New here? Create an account'}).click();
+  const email='synthetic-qa-'+Date.now()+'@example.test';
+  await page.getByLabel('Full name').fill('Synthetic QA Customer');
+  await page.getByLabel('Email address').fill(email);
+  await page.getByLabel('Password').fill(process.env.DEMO_ADMIN_PASSWORD);
+  await page.getByRole('button',{name:'Create account',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Sign in'})).toBeVisible();
+  await page.getByLabel('Email address').fill(email);
+  await page.getByLabel('Password').fill(process.env.DEMO_ADMIN_PASSWORD);
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page.getByRole('heading',{name:/Hello, Synthetic/})).toBeVisible();
+  await page.getByRole('link',{name:'Shop',exact:true}).click();
+  await page.getByRole('button',{name:'Add to bag +'}).first().click();
+  await page.getByRole('link',{name:/Bag/}).click();
+  await expect(page.getByRole('heading',{name:'Shopping bag'})).toBeVisible();
+  await expect(page.getByText('Simulated total')).toBeVisible();
+  await page.getByRole('button',{name:/Place demo order/}).click();
+  await expect(page.getByRole('heading',{name:/Hello, Synthetic/})).toBeVisible();
+  await expect(page.getByText('simulated paid').first()).toBeVisible();
+  const customerLogin=await request.post('http://127.0.0.1:3100/api/auth/login',{data:{email,password:process.env.DEMO_ADMIN_PASSWORD}});
+  const adminLogin=await request.post('http://127.0.0.1:3100/api/auth/login',{data:{email:'admin@commerceguard.test',password:process.env.DEMO_ADMIN_PASSWORD}});
+  expect(customerLogin.status()).toBe(200);
+  expect(adminLogin.status()).toBe(200);
+  const token=(await customerLogin.json()).token;
+  const admin=(await adminLogin.json()).token;
+  const orders=await request.get('http://127.0.0.1:3100/api/orders',{headers:{Authorization:'Bearer '+token}});
+  const order=(await orders.json()).orders[0];
+  expect(order).toBeTruthy();
+  const denied=await request.get('http://127.0.0.1:3100/api/orders/'+order.id,{headers:{Authorization:'Bearer '+admin}});
+  expect(denied.status()).toBe(200); // admin is authorized
+  const adminProducts=await request.post('http://127.0.0.1:3100/api/products',{headers:{Authorization:'Bearer '+token},data:{name:'Forbidden',category:'Test',price_cents:1,stock:1}});
+  expect(adminProducts.status()).toBe(403);
+});

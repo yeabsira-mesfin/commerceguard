@@ -1,0 +1,16 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE TABLE IF NOT EXISTS users(id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN ('customer','admin')),created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS products(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),name TEXT UNIQUE NOT NULL,description TEXT NOT NULL DEFAULT '',category TEXT NOT NULL,price_cents INT NOT NULL CHECK(price_cents>=0),stock INT NOT NULL CHECK(stock>=0),created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS orders(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),user_id UUID NOT NULL REFERENCES users(id),total_cents INT NOT NULL CHECK(total_cents>=0),status TEXT NOT NULL DEFAULT 'simulated_paid',created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS order_items(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),order_id UUID NOT NULL REFERENCES orders(id),product_id UUID NOT NULL REFERENCES products(id),quantity INT NOT NULL CHECK(quantity>0),unit_price_cents INT NOT NULL);
+CREATE TABLE IF NOT EXISTS audit_logs(id UUID PRIMARY KEY DEFAULT gen_random_uuid(),actor_id UUID REFERENCES users(id),action TEXT NOT NULL,object_type TEXT NOT NULL,object_id UUID,created_at TIMESTAMPTZ DEFAULT now());
+
+
+CREATE TABLE IF NOT EXISTS password_resets(
+ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ token_hash TEXT NOT NULL UNIQUE,
+ expires_at TIMESTAMPTZ NOT NULL,
+ used_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_resets(user_id,expires_at);

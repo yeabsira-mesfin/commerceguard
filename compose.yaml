@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: commerceguard
+      POSTGRES_DB: commerceguard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: ["commerceguard_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U commerceguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://commerceguard:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/commerceguard
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?Set DEMO_ADMIN_PASSWORD}
+      PORT: "3100"
+      NODE_ENV: production
+      DEMO_RESET_TOKENS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    build: ./ecommerce
+    ports: ["127.0.0.1:8081:80"]
+    depends_on: [api]
+volumes:
+  commerceguard_pg:

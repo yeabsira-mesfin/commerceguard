@@ -1,29 +1,56 @@
-import logo from './logo.svg';
+import React,{useCallback,useEffect,useState} from 'react';
+import {useSelector,useDispatch} from 'react-redux';
+import {Link,useLocation,useNavigate} from 'react-router-dom';
+import {addItemToCart,removeItemFromCart,setQuantity,clearCart} from './redux/slices/cartSlice';
 import './App.css';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Home from './pages/Home';
-import ProductPage from './pages/ProductPage';
-import CartPage from './pages/CartPage';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-function App() {
-  return (
-    <Router>
-    <Header />
-    <main className="p-4">
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/product/:productId" element={<ProductPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-      </Routes>
-    </main>
-    <Footer />
-  </Router>
-  );
-}
 
-export default App;
+const price=cents=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
+async function api(path,token,options={}){
+  const res=await fetch('/api'+path,{...options,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(options.body?{'Content-Type':'application/json'}:{})}});
+  if(!res.ok){const body=await res.json().catch(()=>({}));throw Error(body.error||'Request failed');}
+  return res.json();
+}
+const visuals={Workspace:['◫','#e9eee9'],Technology:['⌘','#e6e9f0'],Lifestyle:['◈','#f2e9e3'],Travel:['✦','#e4ece9']};
+export default function App(){
+  const dispatch=useDispatch(),cart=useSelector(s=>s.cart.items),location=useLocation(),navigate=useNavigate();
+  const [products,setProducts]=useState([]),[orders,setOrders]=useState([]),[metrics,setMetrics]=useState(null);
+  const [user,setUser]=useState(null),[token,setToken]=useState(''),[mode,setMode]=useState('login');
+  const [identity,setIdentity]=useState({name:'',email:'',password:''});
+  const [search,setSearch]=useState(''),[category,setCategory]=useState('All'),[sort,setSort]=useState('featured');
+  const [error,setError]=useState(''),[success,setSuccess]=useState(''),[busy,setBusy]=useState(false);
+  const [stockEdit,setStockEdit]=useState({});
+  const path=location.pathname,admin=user?.role==='admin';
+  const count=cart.reduce((n,p)=>n+p.quantity,0),subtotal=cart.reduce((n,p)=>n+p.price_cents*p.quantity,0);
+  const load=useCallback(async()=>{
+    const r=await api('/products');setProducts(r.products);
+    if(token){const o=await api('/orders',token);setOrders(o.orders);if(user?.role==='admin'){const a=await api('/admin/dashboard',token);setMetrics(a.metrics);}}
+  },[token,user]);
+  useEffect(()=>{load().catch(e=>setError(e.message));},[load]);
+  async function execute(fn,message){
+    setBusy(true);setError('');setSuccess('');
+    try{await fn();if(message)setSuccess(message);await load();}
+    catch(e){setError(e.message);}finally{setBusy(false);}
+  }
+  async function submitAuth(e){
+    e.preventDefault();
+    await execute(async()=>{
+      if(mode==='signup'){await api('/auth/register',null,{method:'POST',body:JSON.stringify(identity)});setMode('login');setSuccess('Account created. Sign in to continue.');}
+      else{const r=await api('/auth/login',null,{method:'POST',body:JSON.stringify(identity)});setUser(r.user);setToken(r.token);setIdentity({name:'',email:'',password:''});navigate('/account');}
+    },mode==='signup'?null:'Signed in successfully');
+  }
+  function signout(){setToken('');setUser(null);setOrders([]);setMetrics(null);navigate('/');setSuccess('Signed out.');}
+  const display=products.filter(p=>(category==='All'||p.category===category)&&(p.name+' '+p.description).toLowerCase().includes(search.toLowerCase())).sort((a,b)=>sort==='price-up'?a.price_cents-b.price_cents:sort==='price-down'?b.price_cents-a.price_cents:a.name.localeCompare(b.name));
+  const categories=['All',...new Set(products.map(p=>p.category))];
+  return <div className="cg-app">
+    <div className="announcement">COMMERCEGUARD / SECURE COMMERCE EXPERIENCE <span>Simulation only, no payments collected</span></div>
+    <header className="cg-header"><Link className="wordmark" to="/"><span className="brand-icon">◈</span> COMMERCE<span>GUARD</span><small>SECURE BY DESIGN</small></Link><nav aria-label="Main menu"><Link className={path==='/'?'chosen':''} to="/">Shop</Link><Link className={path==='/account'?'chosen':''} to="/account">My account</Link>{admin&&<Link className={path==='/admin'?'chosen':''} to="/admin">Admin</Link>}</nav><div className="header-actions">{user?<button onClick={signout}>Sign out</button>:<Link to="/login">Sign in</Link>}<Link className="cart-link" to="/cart">Bag <b>{count}</b></Link></div></header>
+    <main className="cg-content">{error&&<div className="message msg-error" role="alert">{error}<button onClick={()=>setError('')}>×</button></div>}{success&&<div className="message msg-good" role="status">{success}<button onClick={()=>setSuccess('')}>×</button></div>}
+    {path==='/'&&<><section className="hero"><div><p className="eyebrow">A THOUGHTFUL WAY TO SHOP</p><h1>Considered essentials.<br/><em>Secure experiences.</em></h1><p>Discover everyday pieces in a demo storefront built with secure APIs and accountable transactions.</p><a href="#catalog" className="hero-button">Explore the collection →</a></div><div className="hero-art" aria-hidden="true"><div className="art-box"><span>◈</span><strong>QUALITY IN<br/>EVERY DETAIL.</strong></div></div></section><section id="catalog" className="catalog"><div className="section-head"><div><p className="eyebrow">CURATED COLLECTION</p><h2>Explore our essentials</h2></div><span>{display.length} products</span></div><div className="filters"><input aria-label="Search products" placeholder="Search the collection..." value={search} onChange={e=>setSearch(e.target.value)}/><select aria-label="Filter by category" value={category} onChange={e=>setCategory(e.target.value)}>{categories.map(c=><option key={c}>{c}</option>)}</select><select aria-label="Sort products" value={sort} onChange={e=>setSort(e.target.value)}><option value="featured">Sort: Name</option><option value="price-up">Price: Low to high</option><option value="price-down">Price: High to low</option></select></div><div className="products">{display.map(p=>{const v=visuals[p.category]||['◈','#e7eceb'];return <article className="product" key={p.id}><div className="product-visual" style={{background:v[1]}}><span>{v[0]}</span><small>{p.category}</small></div><div className="product-info"><p>{p.category}</p><h3>{p.name}</h3><small>{p.description}</small><div className="product-bottom"><strong>{price(p.price_cents)}</strong><button disabled={p.stock===0} onClick={()=>{dispatch(addItemToCart(p));setSuccess('Added '+p.name+' to bag');}}>{p.stock?'Add to bag +':'Sold out'}</button></div></div></article>})}</div>{!display.length&&<p className="empty">No matching products.</p>}</section></>}
+    {path==='/cart'&&<><div className="page-head"><p className="eyebrow">YOUR SELECTION</p><h1>Shopping bag</h1><p>Secure simulated checkout with inventory validation.</p></div><div className="cart-grid"><div className="paper">{cart.map(item=><div className="cart-item" key={item.id}><div className="cart-image">{(visuals[item.category]||['◈'])[0]}</div><div className="cart-info"><h3>{item.name}</h3><small>{item.category}</small><button className="text-button" onClick={()=>dispatch(removeItemFromCart(item.id))}>Remove</button></div><div className="quantity"><label>Quantity<select value={item.quantity} onChange={e=>dispatch(setQuantity({id:item.id,quantity:Number(e.target.value)}))}>{Array.from({length:Math.min(10,Math.max(item.stock,1))},(_,i)=>i+1).map(n=><option key={n}>{n}</option>)}</select></label></div><strong>{price(item.price_cents*item.quantity)}</strong></div>)}{!cart.length&&<p className="empty">Your bag is empty. <Link to="/">Browse products</Link></p>}</div><aside className="summary"><h2>Order summary</h2><div><span>Subtotal</span><strong>{price(subtotal)}</strong></div><div><span>Estimated shipping</span><strong>Free</strong></div><div className="total"><span>Simulated total</span><strong>{price(subtotal)}</strong></div><p>Demo only. No credit cards or real payments.</p><button className="primary" disabled={!cart.length||busy} onClick={()=>{if(!user){setError('Sign in before checkout');navigate('/login');return;}execute(async()=>{await api('/orders',token,{method:'POST',body:JSON.stringify({items:cart.map(x=>({product_id:x.id,quantity:x.quantity}))})});dispatch(clearCart());navigate('/account');},'Simulated order placed');}}>Place demo order →</button></aside></div></>}
+    {path==='/login'&&<div className="auth-layout"><div><p className="eyebrow">CUSTOMER ACCESS</p><h1>{mode==='signup'?'Create your account':'Welcome back'}</h1><p>Protected accounts, no hardcoded credentials, and a simulated shopping flow.</p></div><form className="paper auth-form" onSubmit={submitAuth}><h2>{mode==='signup'?'Create account':'Sign in'}</h2>{mode==='signup'&&<label>Full name<input required minLength="2" maxLength="100" value={identity.name} onChange={e=>setIdentity({...identity,name:e.target.value})}/></label>}<label>Email address<input type="email" required value={identity.email} onChange={e=>setIdentity({...identity,email:e.target.value})}/></label><label>Password<input type="password" required minLength={mode==='signup'?12:1} value={identity.password} onChange={e=>setIdentity({...identity,password:e.target.value})}/></label>{mode==='signup'&&<small>Use at least 12 characters. Passwords are hashed on the server.</small>}<button className="primary" disabled={busy}>{mode==='signup'?'Create account':'Sign in'}</button><button className="text-button" type="button" onClick={()=>{setMode(mode==='signup'?'login':'signup');setError('');}}>{mode==='signup'?'Already have an account? Sign in':'New here? Create an account'}</button></form></div>}
+    {path==='/account'&&<><div className="page-head"><p className="eyebrow">YOUR ACCOUNT</p><h1>{user?'Hello, '+user.name.split(' ')[0]:'Account access'}</h1><p>Review your simulated purchase history.</p></div>{!user?<div className="paper"><p>Sign in to view account details and order history.</p><Link className="hero-button" to="/login">Sign in →</Link></div>:<div className="paper"><h2>Order history</h2>{orders.map(o=><div className="order-row" key={o.id}><div><strong>Order #{o.id.slice(0,8)}</strong><small>{new Date(o.created_at).toLocaleString()}</small></div><span>{o.status.replaceAll('_',' ')}</span><strong>{price(o.total_cents)}</strong></div>)}{!orders.length&&<p className="empty">No orders yet. <Link to="/">Shop the collection</Link></p>}</div>}</>}
+    {path==='/admin'&&admin&&<><div className="page-head"><p className="eyebrow">AUTHORIZED OPERATIONS</p><h1>Commerce operations</h1><p>Inventory management and audited administrative actions.</p></div><div className="dashboard-metrics">{[['Orders',metrics?.orders],['Simulated revenue',price(metrics?.total_cents||0)],['Low-stock SKUs',metrics?.low_stock],['Accounts',metrics?.users]].map(([a,b])=><div className="paper" key={a}><small>{a}</small><strong>{b??'...'}</strong></div>)}</div><div className="paper"><h2>Inventory</h2>{products.map(p=><div className="inventory-row" key={p.id}><div><strong>{p.name}</strong><small>{p.category}</small></div><span>{p.stock} in stock</span><input aria-label={'New stock for '+p.name} type="number" min="0" placeholder="New stock" value={stockEdit[p.id]??''} onChange={e=>setStockEdit({...stockEdit,[p.id]:e.target.value})}/><button className="secondary" disabled={busy||stockEdit[p.id]==null||stockEdit[p.id]===''} onClick={()=>execute(async()=>{await api('/products/'+p.id,token,{method:'PATCH',body:JSON.stringify({stock:Number(stockEdit[p.id])})});setStockEdit({...stockEdit,[p.id]:''});},'Inventory updated')}>Update</button></div>)}</div></>}
+    {path==='/admin'&&!admin&&<div className="paper"><h2>Access denied</h2><p>Administrator privileges are required for this page.</p></div>}
+    </main><footer className="cg-footer"><span>◈ COMMERCEGUARD</span><p>A secure full stack portfolio demonstration. All orders and inventory are synthetic.</p><small>© 2026 CommerceGuard Demo</small></footer>
+  </div>;
+}

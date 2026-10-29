@@ -1,0 +1,45 @@
+name: CommerceGuard CI
+on:
+  push:
+    branches: ["feature/**"]
+  pull_request:
+jobs:
+  build-test-scan:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: commerceguard
+          POSTGRES_PASSWORD: ${{ github.sha }}
+          POSTGRES_DB: commerceguard
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U commerceguard" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://commerceguard:${{ github.sha }}@localhost:5432/commerceguard
+      JWT_SECRET: ${{ github.run_id }}-${{ github.sha }}
+      DEMO_ADMIN_PASSWORD: ${{ github.sha }}
+      TEST_INTEGRATION: '1'
+      NODE_ENV: test
+      CI: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build React storefront
+        working-directory: ecommerce
+        run: npm install --no-audit --no-fund && npm run build
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install --no-audit --no-fund
+      - name: Seed disposable PostgreSQL
+        working-directory: backend
+        run: npm run migrate && npm run seed
+      - name: Execute policy and API integration tests
+        working-directory: backend
+        run: npm test
+      - name: Check backend dependencies
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high

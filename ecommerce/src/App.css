@@ -21,3 +21,13 @@
 .demo-token{max-width:100%;overflow-wrap:anywhere;background:#edf8f0;color:#286144;padding:12px;font-size:.73rem}
 @media(max-width:800px){.extra-product-form{grid-template-columns:repeat(2,minmax(0,1fr))}.product-detail{grid-template-columns:1fr}.audit-grid{grid-template-columns:1fr}}
 @media(max-width:550px){.extra-product-form{grid-template-columns:1fr}.extra-inline{display:block}.product-symbol{min-height:190px;font-size:6rem}}
+
+
+/* WCAG text contrast corrections */
+.wordmark>span:not(.brand-icon){color:#176244}
+.wordmark small,small{color:#4a5b50}
+.hero .eyebrow,.product-info>p{color:#18583c}
+.hero p:not(.eyebrow),.section-head>span,.product-info small{color:#405749}
+.cg-header nav a,.header-actions a,.header-actions button{color:#40594b}
+.product-info>p{font-weight:800}
+.cg-footer p,.cg-footer small{color:#d3e9d9}

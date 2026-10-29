@@ -21,7 +21,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "test:e2e": "playwright test"
   },
   "eslintConfig": {
     "extends": [
@@ -44,6 +45,7 @@
   "devDependencies": {
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.3"
+    "tailwindcss": "^3.4.3",
+    "@playwright/test": "^1.56.0"
   }
 }

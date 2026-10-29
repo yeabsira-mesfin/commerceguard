@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import {rateLimit} from 'express-rate-limit';
 import {pool,query} from './db.js';
 import {isAdmin,canReadOrder,validCart,cleanProduct} from './policy.js';
+import {installCommerceExtensions} from './extensions.js';
 
 export const app=express();
 app.disable('x-powered-by');
@@ -102,6 +103,7 @@ app.get('/api/admin/dashboard',auth,admin,wrap(async(_req,res)=>{
   const {rows}=await query('SELECT (SELECT count(*)::int FROM orders) orders,(SELECT coalesce(sum(total_cents),0)::int FROM orders) total_cents,(SELECT count(*)::int FROM products WHERE stock<10) low_stock,(SELECT count(*)::int FROM users) users');
   res.json({metrics:rows[0]});
 }));
+installCommerceExtensions(app,{query,pool,auth,admin,limiter,wrap,audit});
 app.use((_req,res)=>res.status(404).json({error:'Not found'}));
 app.use((err,_req,res,_next)=>{const status=err.code==='23505'?409:['22P02','23503'].includes(err.code)?400:500;if(status===500)console.error('Unexpected API error',err.code||err.name);res.status(status).json({error:status===409?'Duplicate record':status===400?'Invalid reference':'Internal server error'});});
 if(process.env.NODE_ENV!=='test')app.listen(Number(process.env.PORT||3100),()=>console.log('CommerceGuard API ready'));

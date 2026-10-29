@@ -23,6 +23,7 @@ jobs:
       TEST_INTEGRATION: '1'
       NODE_ENV: test
       CI: 'false'
+      DEMO_RESET_TOKENS: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

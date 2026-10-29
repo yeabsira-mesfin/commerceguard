@@ -10,7 +10,7 @@ Secure full stack commerce demo built from the original React, Redux and React R
 - Short-lived JWT authorization, server-controlled customer/admin roles, login rate limiting.
 - Cart checkout with inventory locking, server-controlled prices, stock decrements and simulated order persistence.
 - Order history and object-level authorization to prevent another customer reading an order.
-- Admin inventory editing, sales metrics and audit logging.
+- Admin inventory/product management, simulated order status, customer profiles, sales metrics and audit logging.
 - Policy unit tests, PostgreSQL integration tests, GitHub Actions build and dependency audit.
 
 ## Getting started
@@ -40,8 +40,16 @@ Tests cover BOLA/IDOR access denial, admin route restrictions, price integrity, 
 
 ## Known limitations
 
-This is an MVP, not a commercial checkout system. No payment processing, password-reset email, advanced product editing, returns, shipment integration, pagination, refresh-token rotation, or production deployment is included. Images are decorative CSS illustrations. Production rollout would require HTTPS, secret management, CSRF/session design for future cookie auth, password reset with email verification, expanded monitoring and formal security testing.
+This is an MVP, not a commercial checkout system. There are no live payments or password-reset emails. A one-time reset-token flow works only in an expressly enabled local demo; it is disabled from returning tokens in production. Product editing, profile updates and simulated order status workflows are available. Returns, real shipping, pagination, refresh-token rotation and production deployment are not included. Images are decorative CSS illustrations. Production rollout would require HTTPS, secret management, CSRF/session design for future cookie auth, password reset with email verification, expanded monitoring and formal security testing.
 
 ## Portfolio description
 
 Built a secure demo commerce platform with React, Redux, Express, PostgreSQL, role-based access, database-backed inventory, atomic simulated checkout, and audit-logged administrative changes.
+
+## Additional account and operations features
+
+CommerceGuard supports product-detail views, customer profile updates, administrator product creation/editing, order status transitions, and a local-only token-based password recovery demonstration. Demo tokens are returned only if `DEMO_RESET_TOKENS=true` and `NODE_ENV` is not production; the Docker stack explicitly disables that option.
+
+## Docker and browser QA
+
+Copy `docker.env.example` to `.env`, replace placeholders, and run `docker compose up --build`. Open http://127.0.0.1:8081. CI verifies database-backed APIs, browser cart/checkout, administrator operations, token reset, accessibility and container image builds. See [QA.md](QA.md).
